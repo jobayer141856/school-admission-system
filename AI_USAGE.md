@@ -62,10 +62,12 @@ Describe:
   - Phased progression with explicit developer handoff documentation.
 - Any incorrect suggestions or hallucinations found:
   - `WriteAsJsonAsync` initially defaulted content type to `application/json; charset=utf-8` instead of `application/problem+json`; corrected.
-  - Test files initially caused `tsc` type resolution issues during `npm run build`; resolved by adding test exclusions to `tsconfig.json`.
+  - Test files initially caused `tsc` type resolution issues during `npm run build`; resolved by configuring `@testing-library/jest-dom/vitest` types.
+  - GitHub Actions CI initially configured `node-version: '20'`, which lacked `node:zlib.createZstdDecompress` required by `undici@8` (used by `jsdom@31`); upgraded CI and Dockerfile to Node 22 LTS.
 - What was changed after review:
   - Updated middleware to explicitly pass `contentType: "application/problem+json"` to `WriteAsJsonAsync`.
   - Configured embedded Swagger UI along with Scalar API reference for `/swagger` route compatibility.
+  - Upgraded CI workflow and frontend Dockerfile to Node.js 22 LTS to support modern web decompression standards.
 
 ## Verification performed
 
