@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-test:
+    name: Build & Test Backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore backend/SchoolAdmission.sln
+
+      - name: Build backend
+        run: dotnet build backend/SchoolAdmission.sln --no-restore --configuration Release
+
+      - name: Run backend tests
+        run: dotnet test backend/SchoolAdmission.sln --no-build --configuration Release --verbosity normal
+
