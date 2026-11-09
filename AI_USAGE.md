@@ -64,8 +64,8 @@ Describe:
 | Backend build | `dotnet build backend/SchoolAdmission.sln` | Pass (0 errors, 0 warnings) - 2026-11-09 |
 | Concurrency test | `SimultaneousHoldRequests_NeverExceedCapacity_AndNeverOversell` (50 concurrent requests competing for 5 seats) | Pass (0 oversold, exactly 5 created, 45 full) - 2026-11-09 |
 | Same-student concurrency test | `SimultaneousRequests_ForSameStudent_NeverCreateDuplicateActiveHolds` (25 concurrent requests for same student) | Pass (exactly 1 created, 24 returned existing hold) - 2026-11-09 |
-| Frontend tests | `npm test --prefix frontend` | Pass (21 tests passed) - 2026-11-09 |
-| Frontend build | `npm run build --prefix frontend` | Pass (built in 2.69s, 0 errors) - 2026-11-09 |
+| Frontend tests | `npm test --prefix frontend` | Pass (30 tests passed: API client, hold lifecycle, countdown timer, admin forms, and overview metrics) - 2026-11-09 |
+| Frontend build | `npm run build --prefix frontend` | Pass (built in 2.74s, 0 errors) - 2026-11-09 |
 | EF Core migration | `dotnet ef migrations add InitialCreate` | Pass (migration created cleanly) - 2026-11-09 |
 | Docker Compose config validation | `docker-compose config` | Pass (valid configuration with postgres, api, frontend) - 2026-11-09 |
 | Health check probe | `curl http://localhost:8080/health` | Pass (503 Service Unavailable when DB is offline, verified functional) - 2026-11-09 |

@@ -136,23 +136,23 @@ Implement in vertical slices. Keep the application runnable after each phase.
 
 ---
 
-## Developer Handoff: Deploying & Starting Phase 7
+## Developer Handoff: Deploying & Starting Phase 8
 
-If you are a developer continuing from Phase 6 to Phase 7, follow these steps:
+If you are a developer continuing from Phase 7 to Phase 8, follow these steps:
 
 ### 1. Prerequisites & Environment Setup
 - .NET 10 SDK and Node.js (v20+) installed.
-- Clone repository and ensure `.env` exists:
+- Ensure `.env` exists:
   ```bash
   cp .env.example .env
   ```
 
 ### 2. Verify Current Backend & Frontend Builds
-- Run backend tests:
+- Run backend tests (60 passed):
   ```bash
   dotnet test backend/SchoolAdmission.sln
   ```
-- Run frontend tests & build:
+- Run frontend tests (30 passed) & build:
   ```bash
   npm test --prefix frontend
   npm run build --prefix frontend
@@ -169,32 +169,27 @@ If you are a developer continuing from Phase 6 to Phase 7, follow these steps:
   ```
   Open browser at `http://localhost:3000`.
 
-### 4. Phase 7 Next Steps (Admin Workflow)
-Proceed with **Phase 7 — Admin workflow**:
-1. Implement `CreateClassForm.tsx` in `frontend/src/features/admin/components/`:
-   - Form fields:
-     - `name`: class and shift name (e.g. `Class 6 - Morning Shift`), required, non-empty, max 160 chars.
-     - `totalSeats`: total seat capacity, required, integer > 0.
-   - Form validation with clear inline error messages.
-   - On submit: calls `classesApi.createClass({ name, totalSeats })`.
-   - On success: invalidates `CLASSES_QUERY_KEY`, clears form inputs, displays success toast/alert.
-2. Implement `AdminClassOverviewTable.tsx` in `frontend/src/features/admin/components/`:
-   - Lists all configured classes in a clean editorial table.
-   - Columns: Class/Shift Name, Total Seats, Held Seats, Confirmed Seats, Available Seats.
-   - Real-time updates via `useClasses` hook.
-3. Update `AdminPage.tsx`:
-   - Retain demo admin assumption warning banner (`docs/02-assumptions.md`).
-   - Embed `CreateClassForm` and `AdminClassOverviewTable`.
-4. Add automated tests for form validation and class creation.
+### 4. Phase 8 Next Steps (Quality and Submission)
+Proceed with **Phase 8 — Quality and submission**:
+1. Verify all acceptance criteria in `docs/21-acceptance-criteria.md`.
+2. Verify full docker-compose orchestration (`docker-compose up --build`).
+3. Final review of `ASSUMPTIONS.md` and `AI_USAGE.md`.
+4. Ensure no uncommitted secrets or build artifacts.
 
 ---
 
-## Phase 7 — Admin workflow `[NEXT]`
+## Phase 7 — Admin workflow `[COMPLETED]`
 
 - Add `/admin` class creation form and class overview table.
 - Add validation and success/error feedback.
+- Aggregate capacity indicators and utilization progress bars.
+- 9 unit tests verifying form validation, submission, error states, and metrics table.
 
 Exit criteria: admin can create admission units through UI.
+
+---
+
+## Phase 8 — Quality and submission `[NEXT]`
 
 ---
 
