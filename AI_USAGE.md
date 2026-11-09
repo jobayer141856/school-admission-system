@@ -6,7 +6,7 @@ Complete this file honestly before submission. Do not claim tools or checks that
 
 | Tool | Purpose | Files/areas | Human verification |
 |---|---|---|---|
-| Google Antigravity (Gemini 3.8 Flash) | Clean Architecture, domain entities, persistence, hold lifecycle, and frontend foundation | `backend/`, `frontend/`, `docker-compose.yml`, `.github/`, `docs/20-implementation-plan.md` | Compiled with `dotnet build` and `npm run build`, tested with `dotnet test` and `npm test` |
+| Google Antigravity (Gemini 3.8 Flash) | Clean Architecture, domain entities, persistence, hold lifecycle, and complete parent UI workflow | `backend/`, `frontend/`, `docker-compose.yml`, `.github/`, `docs/20-implementation-plan.md` | Compiled with `dotnet build` and `npm run build`, tested with `dotnet test` and `npm test` |
 
 ## AI-generated or AI-assisted work
 
@@ -33,11 +33,18 @@ Describe:
     - Automated concurrency stress tests proving capacity is never oversold.
   - Phase 5 Frontend foundation:
     - Vite React 18 TypeScript application in `frontend/`.
-    - Tailwind CSS configuration following `frontend-design` skill (editorial palette, custom tokens, accessible focus rings).
-    - React Router, TanStack Query provider, and typed `apiClient` with automatic `X-Student-Id` header injection.
+    - Tailwind CSS configuration following `frontend-design` skill.
+    - Router, Query client, and typed `apiClient` with automatic `X-Student-Id` header injection.
     - Components: `Navbar`, `Footer`, `Layout`, `StudentIdentityBar`, `ClassCard`, `ClassList`, and `AdmissionsPage`.
-    - Multi-stage `frontend/Dockerfile` with Nginx on port 3000 and updated `docker-compose.yml`.
-    - Automated unit tests with Vitest and React Testing Library (10 tests passing).
+    - Multi-stage `frontend/Dockerfile` with Nginx and updated `docker-compose.yml`.
+  - Phase 6 Parent workflow:
+    - `holds.api.ts` with typed methods for `getMyHolds`, `confirmHold`, and `cancelHold`.
+    - Hooks `useMyHolds`, `useConfirmHold`, and `useCancelHold` with dual-query invalidation and fast polling on active holds.
+    - `HoldCountdown.tsx` component with live seconds timer, 2-minute urgency warning, and `onExpire` hook.
+    - `ApplicationCard.tsx` with status handling for `HELD`, `CONFIRMED`, `EXPIRED`, and `CANCELLED`.
+    - Simulated payment button calling confirmation endpoint, and cancellation button.
+    - Completed `MyApplicationsPage.tsx` supporting refresh recovery from `localStorage`.
+    - Unit tests for countdown, application card, and API client (21 frontend tests).
 - Which prompts or approaches were materially useful:
   - User requested targeting `.NET 10` (`net10.0`).
   - Frontend visual design direction per `frontend-design` skill.
@@ -57,8 +64,8 @@ Describe:
 | Backend build | `dotnet build backend/SchoolAdmission.sln` | Pass (0 errors, 0 warnings) - 2026-11-09 |
 | Concurrency test | `SimultaneousHoldRequests_NeverExceedCapacity_AndNeverOversell` (50 concurrent requests competing for 5 seats) | Pass (0 oversold, exactly 5 created, 45 full) - 2026-11-09 |
 | Same-student concurrency test | `SimultaneousRequests_ForSameStudent_NeverCreateDuplicateActiveHolds` (25 concurrent requests for same student) | Pass (exactly 1 created, 24 returned existing hold) - 2026-11-09 |
-| Frontend tests | `npm test --prefix frontend` | Pass (10 tests passed) - 2026-11-09 |
-| Frontend build | `npm run build --prefix frontend` | Pass (built in 3.5s, 0 errors) - 2026-11-09 |
+| Frontend tests | `npm test --prefix frontend` | Pass (21 tests passed) - 2026-11-09 |
+| Frontend build | `npm run build --prefix frontend` | Pass (built in 2.69s, 0 errors) - 2026-11-09 |
 | EF Core migration | `dotnet ef migrations add InitialCreate` | Pass (migration created cleanly) - 2026-11-09 |
 | Docker Compose config validation | `docker-compose config` | Pass (valid configuration with postgres, api, frontend) - 2026-11-09 |
 | Health check probe | `curl http://localhost:8080/health` | Pass (503 Service Unavailable when DB is offline, verified functional) - 2026-11-09 |

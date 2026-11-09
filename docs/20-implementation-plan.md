@@ -116,9 +116,29 @@ Implement in vertical slices. Keep the application runnable after each phase.
 
 ---
 
-## Developer Handoff: Deploying & Starting Phase 6
+## Phase 6 — Parent workflow `[COMPLETED]`
 
-If you are a developer continuing from Phase 5 to Phase 6, follow these steps:
+- [x] Implement `holds.api.ts` for fetching applications, simulated payment confirmation, and cancellation.
+- [x] Implement `useMyHolds`, `useConfirmHold`, and `useCancelHold` hooks with automatic query cache invalidation and background polling (every 3.5s while active holds exist).
+- [x] Implement `HoldCountdown.tsx` component computing exact minutes and seconds remaining, warning when under 2 minutes, and firing `onExpire` when time elapses.
+- [x] Implement `ApplicationCard.tsx`:
+  - Displays class name, hold ID, and live status badge.
+  - `HELD`: shows countdown, simulated payment button ("Pay Admission Fee"), and "Cancel Application" button.
+  - `CONFIRMED`: shows green badge and official confirmation notice.
+  - `EXPIRED`: shows red badge, disables payment, and explains seat release.
+  - `CANCELLED`: shows grey cancellation notice.
+- [x] Implement complete `MyApplicationsPage.tsx`:
+  - Restores applications on refresh or browser reopening by reusing `student_id` from `localStorage`.
+  - Shows loading skeleton, empty states with CTA to browse classes, and success/error feedback alerts.
+- [x] Add automated tests for countdown, application card actions, and hold API calls (21/21 frontend tests pass).
+
+**Exit criteria**: Parent can select class, reserve seat, monitor live countdown, confirm admission with simulated payment, or cancel hold through UI.
+
+---
+
+## Developer Handoff: Deploying & Starting Phase 7
+
+If you are a developer continuing from Phase 6 to Phase 7, follow these steps:
 
 ### 1. Prerequisites & Environment Setup
 - .NET 10 SDK and Node.js (v20+) installed.
@@ -149,43 +169,29 @@ If you are a developer continuing from Phase 5 to Phase 6, follow these steps:
   ```
   Open browser at `http://localhost:3000`.
 
-### 4. Phase 6 Next Steps (Parent Workflow)
-Proceed with **Phase 6 — Parent workflow**:
-1. Implement holds API client in `frontend/src/features/student-holds/api/holds.api.ts`:
-   - `getMyHolds()`: calls `GET /me/holds`
-   - `confirmHold(holdId)`: calls `POST /holds/{holdId}/confirm`
-   - `cancelHold(holdId)`: calls `DELETE /holds/{holdId}`
-2. Implement custom TanStack Query hook in `frontend/src/features/student-holds/hooks/useMyHolds.ts`:
-   - Polls `GET /me/holds` every 4 seconds while active holds exist.
-   - Refetches on tab focus.
-3. Implement `HoldCountdown.tsx`:
-   - Local countdown timer computing seconds remaining until server `expiresAt`.
-   - When countdown expires, transitions to `EXPIRED` badge and disables payment action.
-4. Implement `ApplicationCard.tsx`:
-   - Shows class name, hold ID, creation time, status badge (`HELD`, `CONFIRMED`, `EXPIRED`, `CANCELLED`).
-   - For `HELD`: shows countdown, "Pay admission fee" button (calls simulated confirmation), and "Cancel application" button.
-   - For `CONFIRMED`: shows green badge and admission confirmation notice.
-   - For `EXPIRED`: shows red badge and explains that the seat was released.
-5. Implement complete `MyApplicationsPage.tsx`:
-   - Displays student's applications.
-   - Handles refresh and browser restart by reading student ID from `localStorage`.
-   - Empty state when student has no applications.
+### 4. Phase 7 Next Steps (Admin Workflow)
+Proceed with **Phase 7 — Admin workflow**:
+1. Implement `CreateClassForm.tsx` in `frontend/src/features/admin/components/`:
+   - Form fields:
+     - `name`: class and shift name (e.g. `Class 6 - Morning Shift`), required, non-empty, max 160 chars.
+     - `totalSeats`: total seat capacity, required, integer > 0.
+   - Form validation with clear inline error messages.
+   - On submit: calls `classesApi.createClass({ name, totalSeats })`.
+   - On success: invalidates `CLASSES_QUERY_KEY`, clears form inputs, displays success toast/alert.
+2. Implement `AdminClassOverviewTable.tsx` in `frontend/src/features/admin/components/`:
+   - Lists all configured classes in a clean editorial table.
+   - Columns: Class/Shift Name, Total Seats, Held Seats, Confirmed Seats, Available Seats.
+   - Real-time updates via `useClasses` hook.
+3. Update `AdminPage.tsx`:
+   - Retain demo admin assumption warning banner (`docs/02-assumptions.md`).
+   - Embed `CreateClassForm` and `AdminClassOverviewTable`.
+4. Add automated tests for form validation and class creation.
 
 ---
 
-## Phase 6 — Parent workflow `[NEXT]`
+## Phase 7 — Admin workflow `[NEXT]`
 
-- Add create hold, my applications, countdown, simulated payment, cancellation.
-- Add refresh recovery and polling.
-- Add loading/error/empty/conflict states.
-
-Exit criteria: parent completes entire workflow through UI.
-
----
-
-## Phase 7 — Admin workflow
-
-- Add `/admin` class creation form and class overview.
+- Add `/admin` class creation form and class overview table.
 - Add validation and success/error feedback.
 
 Exit criteria: admin can create admission units through UI.
