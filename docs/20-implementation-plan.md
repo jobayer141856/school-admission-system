@@ -74,23 +74,55 @@ Implement in vertical slices. Keep the application runnable after each phase.
 
 ---
 
-## Developer Handoff: Deploying & Starting Phase 4
+## Phase 4 — Hold lifecycle and concurrency `[COMPLETED]`
 
-If you are a developer continuing from Phase 3 to Phase 4, follow these steps:
+- [x] Implement `ISeatHoldRepository` persistence port and EF Core PostgreSQL implementation:
+  - Row-level locking on `admission_classes` using `SELECT ... FOR UPDATE` within a database transaction.
+  - Single active hold per student policy: returns existing hold if requesting the same class; returns 409 Conflict if attempting to hold across different classes.
+  - Automatic expiration of stale holds without requiring external background workers.
+  - Idempotent confirmation: returns `200 OK` on repeated confirmations without double-counting seats.
+  - Cancellation: marks active hold as `CANCELLED` and returns `204 No Content` (idempotent); rejects confirmation cancellation with `409 Conflict`.
+- [x] Implement application use cases in `backend/src/SchoolAdmission.Application/SeatHolds/`:
+  - `CreateSeatHoldHandler`: handles hold creation with configured duration (`HOLD_DURATION_SECONDS`, default 600).
+  - `GetSeatHoldHandler`: validates student ownership (returns 404 for wrong owner/unknown hold).
+  - `ConfirmSeatHoldHandler`: simulates payment, transitions status to `CONFIRMED`.
+  - `CancelSeatHoldHandler`: cancels eligible holds.
+  - `GetStudentSeatHoldsHandler`: returns current student's applications with class names and countdown timestamps.
+- [x] Implement API controllers:
+  - `HoldsController`:
+    - `POST /classes/{classId}/holds` (requires `X-Student-Id`, returns 201 Created or 409 Conflict).
+    - `GET /holds/{holdId}` (requires `X-Student-Id`, validates ownership).
+    - `POST /holds/{holdId}/confirm` (requires `X-Student-Id`, idempotent 200 OK).
+    - `DELETE /holds/{holdId}` (requires `X-Student-Id`, returns 204 No Content).
+  - `MeController`:
+    - `GET /me/holds` (requires `X-Student-Id`, lists student's holds).
+- [x] Add automated concurrency and lifecycle tests:
+  - Tested 50 simultaneous competing requests for 5 seats: exactly 5 succeed, 45 return 409, 0 oversold.
+  - Tested 25 simultaneous requests for the same student: exactly 1 creates hold, 24 return existing hold.
+  - All 60 automated tests pass (`dotnet test backend/SchoolAdmission.sln`).
+
+**Exit criteria**: Concurrency test passes, zero overselling, duplicate confirmations idempotent, all 60 tests pass.
+
+---
+
+## Developer Handoff: Deploying & Starting Phase 5
+
+If you are a developer continuing from Phase 4 to Phase 5, follow these steps:
 
 ### 1. Prerequisites & Environment Setup
 - .NET 10 SDK installed (or Docker Compose).
+- Node.js (v20+) installed.
 - Clone the repository and navigate to root:
   ```bash
   cp .env.example .env
   ```
 
-### 2. Verify Current Build and Tests
-Run all unit tests across the solution:
+### 2. Verify Current Backend Build and Tests
+Run all unit and concurrency tests across the backend:
 ```bash
 dotnet test backend/SchoolAdmission.sln
 ```
-All 46 tests should pass without errors or warnings.
+All 60 tests should pass without errors or warnings.
 
 ### 3. Run API Locally
 To run the API on `http://localhost:8080`:
@@ -99,72 +131,44 @@ dotnet run --project backend/src/SchoolAdmission.API/SchoolAdmission.API.csproj 
 ```
 - Probe health: `curl http://localhost:8080/health`
 - Open Swagger UI: `http://localhost:8080/swagger`
-- Test classes API:
-  - Create class:
-    ```bash
-    curl -X POST http://localhost:8080/classes -H "Content-Type: application/json" -d "{\"name\":\"Class 6 - Morning Shift\",\"totalSeats\":120}"
-    ```
-  - List classes:
-    ```bash
-    curl http://localhost:8080/classes
-    ```
+- Test hold creation:
+  ```bash
+  curl -X POST http://localhost:8080/classes/{classId}/holds -H "X-Student-Id: 20152691234567890"
+  ```
+- Test student holds:
+  ```bash
+  curl http://localhost:8080/me/holds -H "X-Student-Id: 20152691234567890"
+  ```
 
-### 4. Phase 4 Next Steps
-Proceed with **Phase 4 — Hold lifecycle and concurrency**:
-1. Implement Hold Abstractions & Repository:
-   - `ISeatHoldRepository` in `backend/src/SchoolAdmission.Application/SeatHolds/`
-   - Implementation in `backend/src/SchoolAdmission.Infrastructure/Repositories/SeatHoldRepository.cs`
-   - Include row-level locking method (`SELECT ... FOR UPDATE` on `admission_classes`) to prevent race conditions during hold creation.
-2. Implement Seat Hold Use-Cases:
-   - `CreateSeatHoldHandler`:
-     - Requires `X-Student-Id`.
-     - Transaction begin.
-     - Row-lock target class row (`SELECT ... FOR UPDATE`).
-     - Expire stale holds for that class.
-     - Check if student already has an active hold across the system (per `02-assumptions.md`: return existing hold if for same unit, or 409 if for another unit).
-     - Calculate remaining capacity (`totalSeats - activeHeld - confirmed`).
-     - If available <= 0, return 409 Conflict.
-     - Insert `SeatHold` with expiry `now + HOLD_DURATION_SECONDS` (default 600).
-     - Commit transaction.
-   - `GetSeatHoldHandler`:
-     - Requires `X-Student-Id`.
-     - Validates ownership (returns 404 for wrong owner/unknown hold).
-     - Evaluates expiry before returning.
-   - `ConfirmSeatHoldHandler`:
-     - Requires `X-Student-Id`.
-     - Validates ownership.
-     - Idempotent: returns 200 `CONFIRMED` if already confirmed without re-incrementing count.
-     - Transitions `HELD` to `CONFIRMED` and sets `confirmed_at_utc`. Returns 409 if expired/cancelled.
-   - `CancelSeatHoldHandler`:
-     - Requires `X-Student-Id`.
-     - Validates ownership.
-     - Returns 204 No Content for cancelled active hold (idempotent if already cancelled).
-     - Returns 409 if already confirmed or expired.
-   - `GetStudentSeatHoldsHandler`:
-     - Endpoint `GET /me/holds`.
-     - Returns current student's holds with class names and remaining expiry.
-3. Implement `HoldsController` and `MeController` (or `/me/holds` endpoint).
-4. Add automated concurrency tests proving capacity is never oversold.
+### 4. Phase 5 Next Steps (Frontend Foundation)
+Follow the `frontend-design` skill guidelines:
+1. Initialize Vite + React + TypeScript in `frontend/`:
+   ```bash
+   npm create vite@latest frontend -- --template react-ts
+   ```
+2. Install UI dependencies:
+   - React Router (`react-router-dom`)
+   - TanStack Query (`@tanstack/react-query`)
+   - Axios or typed fetch client
+   - Lucide React icons
+   - Tailwind CSS for styling
+3. Design Direction (`frontend-design` skill):
+   - Palette: Deep Slate `#0f172a`, Off-white Surface `#ffffff`, Warm Canvas `#f8fafc`, Rich Indigo Accent `#4338ca`, Muted Slate `#64748b`, Alert Green `#059669`, Alert Red `#e11d48`.
+   - Typography: Clean modern sans-serif with distinct weights.
+   - Layout: Non-generic responsive layout. Open with clear student birth-registration number entry, followed by real-time admission class cards.
+4. Core modules to build:
+   - `frontend/src/lib/api-client.ts`: Typed client attaching `X-Student-Id` header from local storage.
+   - `frontend/src/features/admission-classes/`: Hooks and components to fetch `GET /classes` and render seat counts.
+   - `frontend/src/features/identity/`: Component to input and save the student birth-registration number.
+5. Create `frontend/Dockerfile` with Nginx multi-stage build.
 
 ---
 
-## Phase 4 — Hold lifecycle and concurrency `[NEXT]`
+## Phase 5 — Frontend foundation `[NEXT]`
 
-- Implement create hold with transaction and locking (`SELECT ... FOR UPDATE`).
-- Implement get hold and student hold list (`GET /holds/{holdId}`, `GET /me/holds`).
-- Implement confirm and cancel (`POST /holds/{holdId}/confirm`, `DELETE /holds/{holdId}`).
-- Implement expiry processing.
-- Add PostgreSQL concurrency tests.
-
-Exit criteria: overselling test passes; duplicate confirmation is idempotent.
-
----
-
-## Phase 5 — Frontend foundation
-
-- Create Vite React TypeScript app.
-- Configure router, API client, query client, styling (using `frontend-design` skill).
-- Add parent identity entry and class list.
+- Create Vite React TypeScript app in `frontend/`.
+- Configure router, API client, query client, and styling (using `frontend-design` skill).
+- Add parent identity entry (`X-Student-Id`) and admission class cards with real-time seat counts.
 
 Exit criteria: frontend displays real API data in Docker.
 

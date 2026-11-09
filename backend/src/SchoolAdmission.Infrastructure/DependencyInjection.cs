@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SchoolAdmission.Application.Abstractions;
 using SchoolAdmission.Application.AdmissionClasses;
+using SchoolAdmission.Application.SeatHolds;
 using SchoolAdmission.Infrastructure.Persistence;
 using SchoolAdmission.Infrastructure.Repositories;
 using SchoolAdmission.Infrastructure.Services;
@@ -25,6 +26,7 @@ public static class DependencyInjection
         services.AddSingleton<IClock, SystemClock>();
 
         services.AddScoped<IAdmissionClassRepository, AdmissionClassRepository>();
+        services.AddScoped<ISeatHoldRepository, SeatHoldRepository>();
 
         return services;
     }

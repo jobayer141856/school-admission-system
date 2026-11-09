@@ -11,6 +11,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// Configure Hold Options
+builder.Services.AddSingleton(new SchoolAdmission.Application.SeatHolds.HoldOptions
+{
+    DurationSeconds = int.TryParse(builder.Configuration["HOLD_DURATION_SECONDS"], out var duration) && duration > 0
+        ? duration
+        : 600
+});
+
 // Add ProblemDetails & Centralized Exception Handling
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ProblemDetailsExceptionHandler>();
