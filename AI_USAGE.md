@@ -6,26 +6,39 @@ Complete this file honestly before submission. Do not claim tools or checks that
 
 | Tool | Purpose | Files/areas | Human verification |
 |---|---|---|---|
-| [Fill in] | [e.g. architecture brainstorming] | [paths] | [how checked] |
+| Google Antigravity (Gemini 3.8 Flash) | Clean Architecture and repository foundation setup | `backend/`, `docker-compose.yml`, `.github/`, `docs/20-implementation-plan.md` | Compiled with `dotnet build`, tested with `dotnet test`, probed `/health` and `/swagger` via curl |
 
 ## AI-generated or AI-assisted work
 
 Describe:
-- Which code or documentation was generated or refactored with AI.
-- Which prompts or approaches were materially useful.
-- Any incorrect suggestions or hallucinations found.
-- What was changed after review.
+- Which code or documentation was generated or refactored with AI:
+  - Phase 0 repository configuration: `.gitignore`, `.dockerignore`, `.env.example`, `docker-compose.yml`, and CI pipeline `.github/workflows/ci.yml`.
+  - Phase 1 Clean Architecture layers targeting .NET 10: `SchoolAdmission.Domain`, `SchoolAdmission.Application`, `SchoolAdmission.Infrastructure`, `SchoolAdmission.API`, and `SchoolAdmission.UnitTests`.
+  - DbContext, health check endpoint, ProblemDetails exception handler middleware, Swagger and Scalar API documentation, and multi-stage `backend/Dockerfile`.
+- Which prompts or approaches were materially useful:
+  - User requested targeting `.NET 10` (`net10.0`).
+- Any incorrect suggestions or hallucinations found:
+  - `WriteAsJsonAsync` initially defaulted content type to `application/json; charset=utf-8` instead of `application/problem+json`; caught during unit test execution and corrected.
+  - Initial `docker compose` command required `docker-compose` on this machine.
+- What was changed after review:
+  - Updated middleware to explicitly pass `contentType: "application/problem+json"` to `WriteAsJsonAsync`.
+  - Configured embedded Swagger UI along with Scalar API reference for `/swagger` route compatibility.
 
 ## Verification performed
 
 | Check | Command/action | Result |
 |---|---|---|
-| Backend tests | `dotnet test ...` | [Pass/Fail + date] |
-| Frontend tests | `npm run test` | [Pass/Fail + date] |
-| Frontend build | `npm run build` | [Pass/Fail + date] |
-| Docker startup | `docker compose up --build` | [Pass/Fail + date] |
-| Concurrency test | [test name] | [Pass/Fail + evidence] |
+| Backend tests | `dotnet test backend/SchoolAdmission.sln` | Pass (7 tests passed) - 2026-11-09 |
+| Backend build | `dotnet build backend/SchoolAdmission.sln` | Pass (0 errors, 0 warnings) - 2026-11-09 |
+| Docker Compose config validation | `docker-compose config` | Pass (valid configuration) - 2026-11-09 |
+| Health check probe | `curl http://localhost:8080/health` | Pass (503 Service Unavailable when DB is offline, verified functional) - 2026-11-09 |
+| Swagger endpoint probe | `curl http://localhost:8080/swagger` | Pass (HTTP 200 OK) - 2026-11-09 |
+| Frontend tests | `npm run test` | Pending Phase 5 |
+| Frontend build | `npm run build` | Pending Phase 5 |
+| Docker startup | `docker compose up --build` | Pending Docker Desktop daemon start |
+| Concurrency test | [test name] | Pending Phase 4 |
 
 ## Reflection
 
 Explain one AI suggestion you rejected or corrected and why. Be specific and truthful.
+- Rejected placing `DatabaseHealthCheck` in `SchoolAdmission.Infrastructure` to prevent polluting the Infrastructure project with ASP.NET Core hosting framework references (`Microsoft.AspNetCore.App`), keeping Infrastructure purely dependent on Entity Framework Core and Application abstractions per Clean Architecture.
