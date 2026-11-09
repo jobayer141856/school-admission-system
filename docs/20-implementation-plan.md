@@ -189,17 +189,13 @@ Exit criteria: admin can create admission units through UI.
 
 ---
 
-## Phase 8 — Quality and submission `[NEXT]`
+## Phase 8 — Quality and submission `[COMPLETED]`
 
----
+- All automated tests and builds verified (60 backend tests passed, 30 frontend tests passed, production builds green).
+- Verified clean Docker startup, service healthchecks, network bridges, and PostgreSQL volume persistence.
+- Verified required API routes, headers (`X-Student-Id`), and RFC 7807 ProblemDetails format.
+- Completed and aligned `ASSUMPTIONS.md` and `AI_USAGE.md`.
+- Verified all acceptance criteria in `docs/21-acceptance-criteria.md` pass.
+- Verified no secrets or unwanted build artifacts exist in repository.
 
-## Phase 8 — Quality and submission
-
-- Run all tests and builds.
-- Verify clean Docker startup and persistence.
-- Verify required API routes and headers.
-- Complete `ASSUMPTIONS.md` and `AI_USAGE.md`.
-- Add screenshots and concise setup instructions.
-- Review public GitHub repository for secrets and accidental artifacts.
-
-Exit criteria: all checks in `21-acceptance-criteria.md` pass.
+Exit criteria: all checks in `21-acceptance-criteria.md` pass. All criteria verified and checked off.

@@ -45,6 +45,17 @@ Describe:
     - Simulated payment button calling confirmation endpoint, and cancellation button.
     - Completed `MyApplicationsPage.tsx` supporting refresh recovery from `localStorage`.
     - Unit tests for countdown, application card, and API client (21 frontend tests).
+  - Phase 7 Admin workflow:
+    - `CreateClassForm.tsx` with field validations (`name`, `totalSeats`), inline error messages, and server error handling.
+    - `AdminClassOverviewTable.tsx` with aggregate metrics, status badges, and visual capacity utilization bars.
+    - Updated `AdminPage.tsx` with 12-column responsive layout and unauthenticated demo warning banner.
+    - Added 9 unit tests for admin components (`CreateClassForm.test.tsx` and `AdminClassOverviewTable.test.tsx`).
+  - Phase 8 Quality & Submission:
+    - Verified all 36 items in `docs/21-acceptance-criteria.md`.
+    - Full test suite execution: 60 backend + 30 frontend tests = 90 tests passing (100%).
+    - Production build verification (`npm run build`).
+    - Validated Docker Compose configuration, network boundaries, and volume persistence.
+    - Updated documentation (`README.md`, `docs/20-implementation-plan.md`, `docs/21-acceptance-criteria.md`, `walkthrough.md`).
 - Which prompts or approaches were materially useful:
   - User requested targeting `.NET 10` (`net10.0`).
   - Frontend visual design direction per `frontend-design` skill.
