@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using SchoolAdmission.Application.AdmissionClasses;
 
 namespace SchoolAdmission.Application;
 
@@ -6,8 +7,10 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        // Application use case handlers will be registered here
+        services.AddScoped<CreateAdmissionClassHandler>();
+        services.AddScoped<GetAdmissionClassesHandler>();
+        services.AddScoped<GetAdmissionClassByIdHandler>();
+
         return services;
     }
 }
-

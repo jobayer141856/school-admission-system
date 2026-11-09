@@ -54,9 +54,29 @@ Implement in vertical slices. Keep the application runnable after each phase.
 
 ---
 
-## Developer Handoff: Deploying & Starting Phase 3
+## Phase 3 — Read/create admission classes `[COMPLETED]`
 
-If you are a developer continuing from Phase 2 to Phase 3, follow these steps:
+- [x] Implement ID formatting helper (`c_<guid>` and `h_<guid>`) in `backend/src/SchoolAdmission.Application/Common/IdHelper.cs`.
+- [x] Implement request/response DTOs: `CreateAdmissionClassRequest`, `AdmissionClassResponse`, and `AdmissionClassDetailResponse`.
+- [x] Implement `IAdmissionClassRepository` abstraction in Application and EF Core implementation in Infrastructure.
+- [x] Implement dynamic seat count calculations:
+  - `heldSeats`: count where `status = 'HELD' AND expires_at_utc > now`
+  - `confirmedSeats`: count where `status = 'CONFIRMED'`
+  - `availableSeats`: `totalSeats - heldSeats - confirmedSeats`
+- [x] Implement application use cases:
+  - `CreateAdmissionClassHandler`: validates input, creates aggregate, persists, returns `c_<guid>`.
+  - `GetAdmissionClassesHandler`: queries all admission classes with real-time seat counts.
+  - `GetAdmissionClassByIdHandler`: queries single admission class by ID (supports `c_<guid>` and raw `<guid>`), returns 404 if not found.
+- [x] Implement `ClassesController` (`POST /classes`, `GET /classes`, `GET /classes/{classId}`).
+- [x] Add unit tests for ID helper, handlers, and controller (46/46 tests passing).
+
+**Exit criteria**: API contract matches `docs/08-api-contract.md`, endpoints compile and test cleanly, seat counts calculate correctly.
+
+---
+
+## Developer Handoff: Deploying & Starting Phase 4
+
+If you are a developer continuing from Phase 3 to Phase 4, follow these steps:
 
 ### 1. Prerequisites & Environment Setup
 - .NET 10 SDK installed (or Docker Compose).
@@ -70,7 +90,7 @@ Run all unit tests across the solution:
 ```bash
 dotnet test backend/SchoolAdmission.sln
 ```
-All 35 tests should pass without errors or warnings.
+All 46 tests should pass without errors or warnings.
 
 ### 3. Run API Locally
 To run the API on `http://localhost:8080`:
@@ -79,42 +99,60 @@ dotnet run --project backend/src/SchoolAdmission.API/SchoolAdmission.API.csproj 
 ```
 - Probe health: `curl http://localhost:8080/health`
 - Open Swagger UI: `http://localhost:8080/swagger`
-- Open Scalar API Docs: `http://localhost:8080/scalar/v1`
+- Test classes API:
+  - Create class:
+    ```bash
+    curl -X POST http://localhost:8080/classes -H "Content-Type: application/json" -d "{\"name\":\"Class 6 - Morning Shift\",\"totalSeats\":120}"
+    ```
+  - List classes:
+    ```bash
+    curl http://localhost:8080/classes
+    ```
 
-### 4. Phase 3 Next Steps
-Proceed with **Phase 3 — Read/create admission classes**:
-1. Application layer use-cases in `backend/src/SchoolAdmission.Application/AdmissionClasses/`:
-   - `CreateAdmissionClassCommand` & Handler: validates name and positive capacity, saves to `AdmissionClasses` table, returns DTO with prefixed ID `c_<guid>`.
-   - `GetAdmissionClassesQuery` & Handler: queries all admission classes and dynamically calculates:
-     - `heldSeats`: count where `status = 'HELD' AND expires_at_utc > now`
-     - `confirmedSeats`: count where `status = 'CONFIRMED'`
-     - `availableSeats`: `totalSeats - heldSeats - confirmedSeats`
-   - `GetAdmissionClassByIdQuery` & Handler: queries single class with same seat calculations, returns 404 if not found.
-2. API Controller:
-   - `ClassesController` in `backend/src/SchoolAdmission.API/Controllers/ClassesController.cs`:
-     - `POST /classes` -> `201 Created` with `Location` header.
-     - `GET /classes` -> `200 OK` list.
-     - `GET /classes/{classId}` -> `200 OK` or `404 Not Found`.
-3. Add integration tests verifying exact API contracts from `docs/08-api-contract.md`.
+### 4. Phase 4 Next Steps
+Proceed with **Phase 4 — Hold lifecycle and concurrency**:
+1. Implement Hold Abstractions & Repository:
+   - `ISeatHoldRepository` in `backend/src/SchoolAdmission.Application/SeatHolds/`
+   - Implementation in `backend/src/SchoolAdmission.Infrastructure/Repositories/SeatHoldRepository.cs`
+   - Include row-level locking method (`SELECT ... FOR UPDATE` on `admission_classes`) to prevent race conditions during hold creation.
+2. Implement Seat Hold Use-Cases:
+   - `CreateSeatHoldHandler`:
+     - Requires `X-Student-Id`.
+     - Transaction begin.
+     - Row-lock target class row (`SELECT ... FOR UPDATE`).
+     - Expire stale holds for that class.
+     - Check if student already has an active hold across the system (per `02-assumptions.md`: return existing hold if for same unit, or 409 if for another unit).
+     - Calculate remaining capacity (`totalSeats - activeHeld - confirmed`).
+     - If available <= 0, return 409 Conflict.
+     - Insert `SeatHold` with expiry `now + HOLD_DURATION_SECONDS` (default 600).
+     - Commit transaction.
+   - `GetSeatHoldHandler`:
+     - Requires `X-Student-Id`.
+     - Validates ownership (returns 404 for wrong owner/unknown hold).
+     - Evaluates expiry before returning.
+   - `ConfirmSeatHoldHandler`:
+     - Requires `X-Student-Id`.
+     - Validates ownership.
+     - Idempotent: returns 200 `CONFIRMED` if already confirmed without re-incrementing count.
+     - Transitions `HELD` to `CONFIRMED` and sets `confirmed_at_utc`. Returns 409 if expired/cancelled.
+   - `CancelSeatHoldHandler`:
+     - Requires `X-Student-Id`.
+     - Validates ownership.
+     - Returns 204 No Content for cancelled active hold (idempotent if already cancelled).
+     - Returns 409 if already confirmed or expired.
+   - `GetStudentSeatHoldsHandler`:
+     - Endpoint `GET /me/holds`.
+     - Returns current student's holds with class names and remaining expiry.
+3. Implement `HoldsController` and `MeController` (or `/me/holds` endpoint).
+4. Add automated concurrency tests proving capacity is never oversold.
 
 ---
 
-## Phase 3 — Read/create admission classes `[NEXT]`
+## Phase 4 — Hold lifecycle and concurrency `[NEXT]`
 
-- Implement `POST /classes`.
-- Implement `GET /classes`.
-- Implement `GET /classes/{classId}``.
-- Calculate counts from persisted records (`heldSeats`, `confirmedSeats`, `availableSeats`).
-
-Exit criteria: API contract integration tests pass.
-
----
-
-## Phase 4 — Hold lifecycle and concurrency
-
-- Implement create hold with transaction and locking.
-- Implement get hold and student hold list.
-- Implement confirm and cancel.
+- Implement create hold with transaction and locking (`SELECT ... FOR UPDATE`).
+- Implement get hold and student hold list (`GET /holds/{holdId}`, `GET /me/holds`).
+- Implement confirm and cancel (`POST /holds/{holdId}/confirm`, `DELETE /holds/{holdId}`).
 - Implement expiry processing.
 - Add PostgreSQL concurrency tests.
 

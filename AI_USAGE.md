@@ -6,7 +6,7 @@ Complete this file honestly before submission. Do not claim tools or checks that
 
 | Tool | Purpose | Files/areas | Human verification |
 |---|---|---|---|
-| Google Antigravity (Gemini 3.8 Flash) | Clean Architecture, domain entities, and EF Core persistence setup | `backend/`, `docker-compose.yml`, `.github/`, `docs/20-implementation-plan.md` | Compiled with `dotnet build`, tested with `dotnet test`, generated migration with `dotnet ef` |
+| Google Antigravity (Gemini 3.8 Flash) | Clean Architecture, domain entities, persistence, and Phase 3 API handlers | `backend/`, `docker-compose.yml`, `.github/`, `docs/20-implementation-plan.md` | Compiled with `dotnet build`, tested with `dotnet test`, tested controllers with unit tests |
 
 ## AI-generated or AI-assisted work
 
@@ -19,6 +19,12 @@ Describe:
     - EF Core Fluent API configurations: `AdmissionClassConfiguration` and `SeatHoldConfiguration`.
     - Generated EF Core migration: `InitialCreate`.
     - Domain unit tests with comprehensive validation and state transition coverage.
+  - Phase 3 Read/create admission classes:
+    - DTOs and `IdHelper` for formatting IDs (`c_<guid>`).
+    - `IAdmissionClassRepository` abstraction in Application and EF Core implementation in Infrastructure.
+    - Application handlers: `CreateAdmissionClassHandler`, `GetAdmissionClassesHandler`, `GetAdmissionClassByIdHandler`.
+    - `ClassesController` endpoints: `POST /classes`, `GET /classes`, `GET /classes/{classId}`.
+    - Unit tests for ID parsing, use cases, and controller actions (46 tests total).
 - Which prompts or approaches were materially useful:
   - User requested targeting `.NET 10` (`net10.0`).
   - Phased progression with explicit developer handoff documentation.
@@ -33,7 +39,7 @@ Describe:
 
 | Check | Command/action | Result |
 |---|---|---|
-| Backend tests | `dotnet test backend/SchoolAdmission.sln` | Pass (35 tests passed) - 2026-11-09 |
+| Backend tests | `dotnet test backend/SchoolAdmission.sln` | Pass (46 tests passed) - 2026-11-09 |
 | Backend build | `dotnet build backend/SchoolAdmission.sln` | Pass (0 errors, 0 warnings) - 2026-11-09 |
 | EF Core migration | `dotnet ef migrations add InitialCreate` | Pass (migration created cleanly) - 2026-11-09 |
 | Docker Compose config validation | `docker-compose config` | Pass (valid configuration) - 2026-11-09 |
