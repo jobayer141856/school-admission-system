@@ -28,15 +28,35 @@ Implement in vertical slices. Keep the application runnable after each phase.
 - [x] Add RFC 7807 `ProblemDetailsExceptionHandler` middleware.
 - [x] Add OpenAPI and Swagger UI at `GET /swagger` and Scalar documentation at `GET /scalar/v1`.
 - [x] Add multi-stage `backend/Dockerfile` with .NET 10 SDK and ASP.NET runtime images.
-- [x] Add unit tests for Clean Architecture boundaries, `IClock`, and ProblemDetails status code mapping (7/7 tests passing).
+- [x] Add unit tests for Clean Architecture boundaries, `IClock`, and ProblemDetails status code mapping.
 
 **Exit criteria**: Backend builds cleanly, all automated tests pass, and API starts on port 8080 with `/health` and `/swagger` responsive.
 
 ---
 
-## Developer Handoff: Deploying & Starting Phase 2
+## Phase 2 — Domain and persistence `[COMPLETED]`
 
-If you are a developer continuing from Phase 1 to Phase 2, follow these steps:
+- [x] Implement `AdmissionClass` aggregate root (`Name`, `TotalSeats`, `CreatedAtUtc`, validations for non-empty bounded name and positive capacity).
+- [x] Implement `SeatHold` aggregate root (`AdmissionClassId`, `StudentId`, `Status`, `CreatedAtUtc`, `ExpiresAtUtc`, `ConfirmedAtUtc`, `CancelledAtUtc`).
+- [x] Implement `StudentId` value object (trimmed, non-empty, max 64 chars) and `SeatHoldStatus` enum (`HELD`, `CONFIRMED`, `EXPIRED`, `CANCELLED`).
+- [x] Implement domain state transitions and invariants:
+  - `Create(...)` sets status `HELD` and expiry based on duration.
+  - `Confirm(now)` is idempotent for `CONFIRMED`, rejects expired/cancelled, sets `ConfirmedAtUtc`.
+  - `Cancel(now)` is idempotent for `CANCELLED`, rejects confirmed/expired, sets `CancelledAtUtc`.
+  - `Expire(now)` transitions `HELD` to `EXPIRED` if past expiry.
+- [x] Configure EF Core Fluent API mappings in `backend/src/SchoolAdmission.Infrastructure/Persistence/Configurations/`:
+  - Table `admission_classes` with `CHECK (total_seats > 0)`.
+  - Table `seat_holds` with indexes `IX_seat_holds_class_status_expires` and `IX_seat_holds_student_status_expires`.
+- [x] Generate initial EF Core migration `InitialCreate`.
+- [x] Add unit tests for domain entities and value objects (35/35 tests passing).
+
+**Exit criteria**: All domain unit tests pass (35/35), database schema and migrations are generated matching `docs/07-database-design.md`.
+
+---
+
+## Developer Handoff: Deploying & Starting Phase 3
+
+If you are a developer continuing from Phase 2 to Phase 3, follow these steps:
 
 ### 1. Prerequisites & Environment Setup
 - .NET 10 SDK installed (or Docker Compose).
@@ -50,7 +70,7 @@ Run all unit tests across the solution:
 ```bash
 dotnet test backend/SchoolAdmission.sln
 ```
-All tests should pass without errors or warnings.
+All 35 tests should pass without errors or warnings.
 
 ### 3. Run API Locally
 To run the API on `http://localhost:8080`:
@@ -61,49 +81,30 @@ dotnet run --project backend/src/SchoolAdmission.API/SchoolAdmission.API.csproj 
 - Open Swagger UI: `http://localhost:8080/swagger`
 - Open Scalar API Docs: `http://localhost:8080/scalar/v1`
 
-### 4. Run with Docker Compose
-Start PostgreSQL and API together:
-```bash
-docker compose up --build
-```
-
-### 5. Phase 2 Next Steps
-Proceed with **Phase 2 — Domain and persistence**:
-1. Implement `AdmissionClass` aggregate in `backend/src/SchoolAdmission.Domain/AdmissionClasses/`:
-   - Properties: `Id`, `Name`, `TotalSeats`, `CreatedAtUtc`.
-   - Invariants: Non-empty name, bounded length, positive capacity (`TotalSeats > 0`).
-2. Implement `SeatHold` aggregate in `backend/src/SchoolAdmission.Domain/SeatHolds/`:
-   - Properties: `Id`, `AdmissionClassId`, `StudentId`, `Status`, `CreatedAtUtc`, `ExpiresAtUtc`, `ConfirmedAtUtc`, `CancelledAtUtc`.
-   - Enums: `SeatHoldStatus` (`HELD`, `CONFIRMED`, `EXPIRED`, `CANCELLED`).
-   - Behaviors: `Create(...)`, `Confirm(now)`, `Expire(now)`, `Cancel(now)`, `IsExpired(now)`.
-3. Add EF Core entity configurations in `backend/src/SchoolAdmission.Infrastructure/Persistence/Configurations/`:
-   - Table `admission_classes` and table `seat_holds` matching `docs/07-database-design.md`.
-   - Indexes and check constraints (`total_seats > 0`).
-4. Generate initial migration:
-   ```bash
-   dotnet ef migrations add InitialCreate --project backend/src/SchoolAdmission.Infrastructure --startup-project backend/src/SchoolAdmission.API
-   ```
-5. Add domain unit tests with fake clock (`TimeProvider`) in `backend/tests/SchoolAdmission.UnitTests`.
+### 4. Phase 3 Next Steps
+Proceed with **Phase 3 — Read/create admission classes**:
+1. Application layer use-cases in `backend/src/SchoolAdmission.Application/AdmissionClasses/`:
+   - `CreateAdmissionClassCommand` & Handler: validates name and positive capacity, saves to `AdmissionClasses` table, returns DTO with prefixed ID `c_<guid>`.
+   - `GetAdmissionClassesQuery` & Handler: queries all admission classes and dynamically calculates:
+     - `heldSeats`: count where `status = 'HELD' AND expires_at_utc > now`
+     - `confirmedSeats`: count where `status = 'CONFIRMED'`
+     - `availableSeats`: `totalSeats - heldSeats - confirmedSeats`
+   - `GetAdmissionClassByIdQuery` & Handler: queries single class with same seat calculations, returns 404 if not found.
+2. API Controller:
+   - `ClassesController` in `backend/src/SchoolAdmission.API/Controllers/ClassesController.cs`:
+     - `POST /classes` -> `201 Created` with `Location` header.
+     - `GET /classes` -> `200 OK` list.
+     - `GET /classes/{classId}` -> `200 OK` or `404 Not Found`.
+3. Add integration tests verifying exact API contracts from `docs/08-api-contract.md`.
 
 ---
 
-## Phase 2 — Domain and persistence `[NEXT]`
-
-- Implement AdmissionClass and SeatHold aggregates.
-- Implement status transitions and validation.
-- Configure tables, indexes, and migrations.
-- Add fake-clock domain tests.
-
-Exit criteria: domain tests pass and schema is created.
-
----
-
-## Phase 3 — Read/create admission classes
+## Phase 3 — Read/create admission classes `[NEXT]`
 
 - Implement `POST /classes`.
 - Implement `GET /classes`.
-- Implement `GET /classes/{classId}`.
-- Calculate counts from persisted records.
+- Implement `GET /classes/{classId}``.
+- Calculate counts from persisted records (`heldSeats`, `confirmedSeats`, `availableSeats`).
 
 Exit criteria: API contract integration tests pass.
 

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using SchoolAdmission.Domain.Exceptions;
 
 namespace SchoolAdmission.API.Middleware;
 
@@ -45,6 +46,11 @@ public sealed class ProblemDetailsExceptionHandler : IExceptionHandler
     {
         return exception switch
         {
+            DomainException de => (
+                StatusCodes.Status400BadRequest,
+                "Domain validation error",
+                de.Message
+            ),
             KeyNotFoundException knf => (
                 StatusCodes.Status404NotFound,
                 "Resource not found",
