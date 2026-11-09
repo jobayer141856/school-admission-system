@@ -89,13 +89,8 @@ Implement in vertical slices. Keep the application runnable after each phase.
   - `CancelSeatHoldHandler`: cancels eligible holds.
   - `GetStudentSeatHoldsHandler`: returns current student's applications with class names and countdown timestamps.
 - [x] Implement API controllers:
-  - `HoldsController`:
-    - `POST /classes/{classId}/holds` (requires `X-Student-Id`, returns 201 Created or 409 Conflict).
-    - `GET /holds/{holdId}` (requires `X-Student-Id`, validates ownership).
-    - `POST /holds/{holdId}/confirm` (requires `X-Student-Id`, idempotent 200 OK).
-    - `DELETE /holds/{holdId}` (requires `X-Student-Id`, returns 204 No Content).
-  - `MeController`:
-    - `GET /me/holds` (requires `X-Student-Id`, lists student's holds).
+  - `HoldsController` (`POST /classes/{classId}/holds`, `GET /holds/{holdId}`, `POST /holds/{holdId}/confirm`, `DELETE /holds/{holdId}`).
+  - `MeController` (`GET /me/holds`).
 - [x] Add automated concurrency and lifecycle tests:
   - Tested 50 simultaneous competing requests for 5 seats: exactly 5 succeed, 45 return 409, 0 oversold.
   - Tested 25 simultaneous requests for the same student: exactly 1 creates hold, 24 return existing hold.
@@ -105,76 +100,80 @@ Implement in vertical slices. Keep the application runnable after each phase.
 
 ---
 
-## Developer Handoff: Deploying & Starting Phase 5
+## Phase 5 — Frontend foundation `[COMPLETED]`
 
-If you are a developer continuing from Phase 4 to Phase 5, follow these steps:
+- [x] Scaffold Vite + React 18 + TypeScript strict SPA in `frontend/`.
+- [x] Configure Tailwind CSS adhering to `frontend-design` skill (editorial typography, custom academic color tokens, accessible focus rings, semantic components).
+- [x] Configure React Router (`/`, `/my-applications`, `/admin`, `*` 404 fallback).
+- [x] Implement typed API client (`frontend/src/lib/api-client.ts`) with automatic `X-Student-Id` header injection from localStorage and RFC 7807 `ProblemDetails` error parsing.
+- [x] Implement TanStack Query client with window focus refetching and background polling.
+- [x] Implement student identity entry bar (`StudentIdentityBar`) with validation, persistent storage, and edit/clear actions.
+- [x] Implement admission class cards (`ClassCard`) displaying total, held, confirmed, and available seats with real-time capacity allocation bars and Apply actions.
+- [x] Create multi-stage `frontend/Dockerfile` with Nginx on port 3000 and update `docker-compose.yml`.
+- [x] Add automated unit tests for API client, student identity hook, and class card components (10/10 tests pass, `npm run build` succeeds in 3s).
+
+**Exit criteria**: Frontend builds cleanly, passes all automated tests, and displays real API data.
+
+---
+
+## Developer Handoff: Deploying & Starting Phase 6
+
+If you are a developer continuing from Phase 5 to Phase 6, follow these steps:
 
 ### 1. Prerequisites & Environment Setup
-- .NET 10 SDK installed (or Docker Compose).
-- Node.js (v20+) installed.
-- Clone the repository and navigate to root:
+- .NET 10 SDK and Node.js (v20+) installed.
+- Clone repository and ensure `.env` exists:
   ```bash
   cp .env.example .env
   ```
 
-### 2. Verify Current Backend Build and Tests
-Run all unit and concurrency tests across the backend:
-```bash
-dotnet test backend/SchoolAdmission.sln
-```
-All 60 tests should pass without errors or warnings.
-
-### 3. Run API Locally
-To run the API on `http://localhost:8080`:
-```bash
-dotnet run --project backend/src/SchoolAdmission.API/SchoolAdmission.API.csproj --urls http://localhost:8080
-```
-- Probe health: `curl http://localhost:8080/health`
-- Open Swagger UI: `http://localhost:8080/swagger`
-- Test hold creation:
+### 2. Verify Current Backend & Frontend Builds
+- Run backend tests:
   ```bash
-  curl -X POST http://localhost:8080/classes/{classId}/holds -H "X-Student-Id: 20152691234567890"
+  dotnet test backend/SchoolAdmission.sln
   ```
-- Test student holds:
+- Run frontend tests & build:
   ```bash
-  curl http://localhost:8080/me/holds -H "X-Student-Id: 20152691234567890"
+  npm test --prefix frontend
+  npm run build --prefix frontend
   ```
 
-### 4. Phase 5 Next Steps (Frontend Foundation)
-Follow the `frontend-design` skill guidelines:
-1. Initialize Vite + React + TypeScript in `frontend/`:
-   ```bash
-   npm create vite@latest frontend -- --template react-ts
-   ```
-2. Install UI dependencies:
-   - React Router (`react-router-dom`)
-   - TanStack Query (`@tanstack/react-query`)
-   - Axios or typed fetch client
-   - Lucide React icons
-   - Tailwind CSS for styling
-3. Design Direction (`frontend-design` skill):
-   - Palette: Deep Slate `#0f172a`, Off-white Surface `#ffffff`, Warm Canvas `#f8fafc`, Rich Indigo Accent `#4338ca`, Muted Slate `#64748b`, Alert Green `#059669`, Alert Red `#e11d48`.
-   - Typography: Clean modern sans-serif with distinct weights.
-   - Layout: Non-generic responsive layout. Open with clear student birth-registration number entry, followed by real-time admission class cards.
-4. Core modules to build:
-   - `frontend/src/lib/api-client.ts`: Typed client attaching `X-Student-Id` header from local storage.
-   - `frontend/src/features/admission-classes/`: Hooks and components to fetch `GET /classes` and render seat counts.
-   - `frontend/src/features/identity/`: Component to input and save the student birth-registration number.
-5. Create `frontend/Dockerfile` with Nginx multi-stage build.
+### 3. Run System Locally
+- Start API:
+  ```bash
+  dotnet run --project backend/src/SchoolAdmission.API/SchoolAdmission.API.csproj --urls http://localhost:8080
+  ```
+- Start Frontend (in separate terminal):
+  ```bash
+  npm run dev --prefix frontend
+  ```
+  Open browser at `http://localhost:3000`.
+
+### 4. Phase 6 Next Steps (Parent Workflow)
+Proceed with **Phase 6 — Parent workflow**:
+1. Implement holds API client in `frontend/src/features/student-holds/api/holds.api.ts`:
+   - `getMyHolds()`: calls `GET /me/holds`
+   - `confirmHold(holdId)`: calls `POST /holds/{holdId}/confirm`
+   - `cancelHold(holdId)`: calls `DELETE /holds/{holdId}`
+2. Implement custom TanStack Query hook in `frontend/src/features/student-holds/hooks/useMyHolds.ts`:
+   - Polls `GET /me/holds` every 4 seconds while active holds exist.
+   - Refetches on tab focus.
+3. Implement `HoldCountdown.tsx`:
+   - Local countdown timer computing seconds remaining until server `expiresAt`.
+   - When countdown expires, transitions to `EXPIRED` badge and disables payment action.
+4. Implement `ApplicationCard.tsx`:
+   - Shows class name, hold ID, creation time, status badge (`HELD`, `CONFIRMED`, `EXPIRED`, `CANCELLED`).
+   - For `HELD`: shows countdown, "Pay admission fee" button (calls simulated confirmation), and "Cancel application" button.
+   - For `CONFIRMED`: shows green badge and admission confirmation notice.
+   - For `EXPIRED`: shows red badge and explains that the seat was released.
+5. Implement complete `MyApplicationsPage.tsx`:
+   - Displays student's applications.
+   - Handles refresh and browser restart by reading student ID from `localStorage`.
+   - Empty state when student has no applications.
 
 ---
 
-## Phase 5 — Frontend foundation `[NEXT]`
-
-- Create Vite React TypeScript app in `frontend/`.
-- Configure router, API client, query client, and styling (using `frontend-design` skill).
-- Add parent identity entry (`X-Student-Id`) and admission class cards with real-time seat counts.
-
-Exit criteria: frontend displays real API data in Docker.
-
----
-
-## Phase 6 — Parent workflow
+## Phase 6 — Parent workflow `[NEXT]`
 
 - Add create hold, my applications, countdown, simulated payment, cancellation.
 - Add refresh recovery and polling.
